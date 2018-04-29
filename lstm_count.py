@@ -12,6 +12,11 @@ import tensorflow as tf
 Parameters
 """
 
+# Seed for all RNGs
+rng_seed = 12345
+np.random.seed(rng_seed)
+tf.set_random_seed(rng_seed)
+
 # Length of each binary string (i.e., length of each input sequence)
 seq_len = 15
 # Maximum range (i.e., max val of the integer reprsented by the bit string)
@@ -37,9 +42,22 @@ learning_rate = 0.01
 momentum = 0.09
 beta1 = 0.7
 
-num_epochs = 500
+num_epochs = 10
 num_train_batches = int(np.floor(float(num_train) / float(batch_size)))
 num_test_batches = int(np.floor(float(num_test) / float(batch_size)))
+
+# Verbosity controls
+print_experiment_summary = True
+if print_experiment_summary:
+	print('Total number of samples:', num_samples)
+	print('Train samples:', num_train)
+	print('Test samples:', num_test)
+	print('Batch size:', batch_size)
+	print('Train batches:', num_train_batches)
+	print('Test batches:', num_test_batches)
+	print('Max epochs:', num_epochs)
+print_train_every = 100
+print_test_every = 10
 
 
 """
@@ -104,6 +122,9 @@ with tf.Session() as sess:
 
 		batch = 0
 
+		# Shuffle train data
+		train_order = np.random.permutation(num_train)
+
 		# 'Iteration' loop
 		train_error_this_epoch = 0.0
 		train_error_temp = 0.0
@@ -111,21 +132,23 @@ with tf.Session() as sess:
 
 			startIdx = batch*batch_size
 			endIdx = (batch+1)*batch_size
-			input_batch, label_batch = dataset[startIdx:endIdx], labels[startIdx:endIdx]
+			inds = train_order[startIdx:endIdx]
+			# input_batch, label_batch = dataset[startIdx:endIdx], labels[startIdx:endIdx]	# no shuffle
+			input_batch, label_batch = dataset[inds], labels[inds]
 
 			net_out = sess.run([loss, error], feed_dict = {data: input_batch, target: label_batch})
 
 			train_error_temp += net_out[1]
 			train_error_this_epoch += net_out[1]
-			if batch % 100 == 0:
-				print('Epoch: ', epoch, 'Error: ', train_error_temp/float(100.0))
+			if batch % print_train_every == 0:
+				print('Epoch: ', epoch, 'Error: ', train_error_temp/float(print_train_every))
 				train_error_temp = 0.0
 
 			batch += 1
 		# print('Epoch:', epoch, 'Full train set:', train_error_this_epoch/float(num_train))
 
 		# Test
-		if epoch % 25 == 0:
+		if epoch % 2 == 0:
 			test_error_this_epoch = 0.0
 			test_error_temp = 0.0
 			while batch < num_train_batches + num_test_batches:
@@ -139,12 +162,13 @@ with tf.Session() as sess:
 
 				test_error_temp += net_out[0]
 				test_error_this_epoch += net_out[0]
-				if batch % 10 == 0:
-					# print('Epoch: ', epoch, 'Error: ', test_error_temp/float(10))
+				if batch % print_test_every == 0:
+					print('Epoch: ', epoch, 'Error: ', test_error_temp/float(print_test_every))
 					test_error_temp = 0.0
 					random_disp = np.random.randint(batch_size)
-					print(input_batch[random_disp])
-					print(np.argmax(net_out[1][random_disp]))
+					print(np.squeeze(input_batch[random_disp]))
+					print('Pred:', np.argmax(net_out[1][random_disp]), 'GT:', \
+						np.argmax(label_batch[random_disp]))
 
 				batch += 1
 			print('Epoch: ', epoch, 'Full test set:', test_error_this_epoch/float(num_test))
