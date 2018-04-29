@@ -10,7 +10,7 @@ from tensorflow.contrib import rnn
 # LSTM is unrolled through 10 time steps
 seq_len = 10
 # Number of hidden LSTM units
-num_units = 6
+num_units = 10
 # Size of each input
 n_input = 1
 # Learning rate
@@ -26,11 +26,11 @@ batch_size = 10
 # Train/Test split
 train_split = 0.8
 # Number of epochs
-num_epochs = 2
+num_epochs = 200
 # Flag to check if loss has been stepped down
 stepFlag = False
 # Class weights (for 0->no-repetition vs 1->repetition)
-class_weights = tf.constant([0.001, 0.999])
+class_weights = tf.constant([0.01, 0.99])
 # class_weights = np.ones((batch_size * seq_len,n_classes))
 # class_weights[:,0] = 0.1*class_weights[:,0]
 # class_weights[:,1] = 0.1*class_weights[:,1]
@@ -40,7 +40,7 @@ class_weights = tf.constant([0.001, 0.999])
 # Synthesize data
 np.random.seed(12345)
 num_tokens = 10
-dataset_size = 50000
+dataset_size = 20
 data = np.zeros((dataset_size, seq_len))
 label = np.zeros((dataset_size, seq_len, n_classes))
 label = np.concatenate((np.ones((dataset_size, seq_len, 1)), np.zeros((dataset_size, seq_len, 1))), axis = -1)
@@ -48,7 +48,7 @@ print(label.shape)
 for i in range(dataset_size):
 	# Generate a random permutation of all tokens. 
 	# Throw in a random translation of all tokens.
-	tmp = np.random.permutation(num_tokens) #+ np.random.randint(50)
+	tmp = 0.01 * np.random.permutation(num_tokens) #+ np.random.randint(50)
 	coin_filp = np.random.randint(0,2)
 	if coin_filp == 0 or coin_filp == 1:
 		# Add a repetition
@@ -71,6 +71,7 @@ for i in range(dataset_size):
 	data[i,:] = tmp
 	# print(data[i,:])
 	# print(label[i,:])
+
 
 # More variable definitions
 num_iters = int(np.floor(dataset_size / batch_size))
@@ -127,22 +128,30 @@ with tf.Session() as sess:
 	epoch = 1
 	while epoch < num_epochs:
 
+		shuffledOrder = np.random.permutation(dataset_size)
+
 		# if epoch > 7 and not stepFlag:
 		# 	learning_rate = learning_rate / 10
 		# 	stepFlag = True
 
 		iter = 1
 		while iter < train_iters:
-			# batch_x, batch_y = mnist.train.next_batch(batch_size = batch_size)
-			# batch_x = batch_x.reshape((batch_size, seq_len, n_input))
-			startIdx = (iter-1)*batch_size
-			endIdx = iter*batch_size
-			batch_x = data[startIdx:endIdx,:]
+			# # batch_x, batch_y = mnist.train.next_batch(batch_size = batch_size)
+			# # batch_x = batch_x.reshape((batch_size, seq_len, n_input))
+			# startIdx = (iter-1)*batch_size
+			# endIdx = iter*batch_size
+			# batch_x = data[startIdx:endIdx,:]
+			# batch_x = np.expand_dims(batch_x, -1)
+			# # print(batch_x, batch_x.shape)
+			# batch_y = label[startIdx:endIdx,:,:]
+			# # print(batch_y, batch_y.shape)
+			# # batch_y = np.reshape(batch_y, (batch_size * seq_len,-1))
+
+			curIterInds = shuffledOrder[(iter-1)*batch_size:iter*batch_size]
+			batch_x = data[curIterInds,:]
 			batch_x = np.expand_dims(batch_x, -1)
-			# print(batch_x, batch_x.shape)
-			batch_y = label[startIdx:endIdx,:,:]
-			# print(batch_y, batch_y.shape)
-			# batch_y = np.reshape(batch_y, (batch_size * seq_len,-1))
+			batch_y = label[curIterInds,:,:]
+
 			net_out = sess.run([outputs, outputs_reshaped, prediction, loss, opt], \
 				feed_dict = {x: batch_x, y: batch_y})
 
