@@ -36,7 +36,7 @@ num_epochs = 6
 # Flag to check if loss has been stepped down
 stepFlag = False
 # Class weights (for 0->no-repetition vs 1->repetition)
-class_weights = tf.constant([0.2, 0.8])
+class_weights = tf.constant([0.1, 0.9])
 # class_weights = np.ones((batch_size * seq_len,n_classes))
 # class_weights[:,0] = 0.1*class_weights[:,0]
 # class_weights[:,1] = 0.1*class_weights[:,1]
@@ -57,7 +57,7 @@ for i in range(dataset_size):
 	# Throw in a random translation of all tokens.
 	tmp = np.random.permutation(num_tokens) #+ np.random.randint(50)
 	coin_filp = np.random.randint(0,2)
-	if coin_filp == 0:
+	if coin_filp == 0 or coin_filp == 1:
 		# Add a repetition
 		# Index of number to repeat
 		tmpIdx_src = np.random.randint(len(tmp))
